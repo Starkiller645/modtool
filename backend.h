@@ -34,6 +34,7 @@ signals:
     void downloadComplete();
     void nextFile(std::vector<std::string>, int);
     void backendError(std::string);
+    void backendInfo(std::string);
 private:
     void downloadFile(std::string, std::string);
     void downloadFile(std::vector<std::string>, int);

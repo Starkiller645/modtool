@@ -36,6 +36,7 @@ void Backend::javaStart() {
 #ifdef __unix__
         emit backendError("You are on Linux but do not seem to have java installed. Please install Java through your package manager and rerun the program.");
 #elif defined(WIN32) || defined(_WIN32)
+        emit backendInfo("Java was not found on your system. We will now download the Java installer. Please follow the instructions to install Java");
         url = "https://sdlc-esd.oracle.com/ESD6/JSCDL/jdk/8u301-b09/d3c52aa6bfa54d3ca74e617f18309292/jre-8u301-windows-i586.exe?GroupName=JSC&FilePath=/ESD6/JSCDL/jdk/8u301-b09/d3c52aa6bfa54d3ca74e617f18309292/jre-8u301-windows-i586.exe&BHost=javadl.sun.com&File=jre-8u301-windows-i586.exe&AuthParam=1632757471_350cd084cf0f41795280719fc7f6339e&ext=.exe";
         filename = "jre-8u301-windows-i586.exe";
         this->java_filename = filename;
@@ -79,13 +80,18 @@ void Backend::forgeStart() {
     bool haveForge = false;
     QStringList versions = mc_dir.entryList(QStringList() << "*", QDir::Dirs);
     foreach(QString filename, versions) {
-        if(filename.contains("forge-1.12.2")) haveForge = true; break;
-        std::cout << "Found Forge" << std::endl;
+        std::cout << filename.toStdString() << std::endl;
+        if(filename.contains("1.12.2-forge")) {
+            std::cout << "Found Forge install" << std::endl;
+            haveForge = true;
+            break;
+        }
     }
 
     if(haveForge) {
         this->modsStart();
     } else {
+        emit backendInfo("A valid Forge install was not found. We are now downloading the Forge installer. Please follow the instructions to install Forge.");
         QUrl forge_dl_url("https://maven.minecraftforge.net/net/minecraftforge/forge/1.12.2-14.23.5.2855/forge-1.12.2-14.23.5.2855-installer.jar");
         this->forge_filename = forge_dl_url.fileName().toStdString();
         this->downloadFile(this->forge_filename, forge_dl_url.toString().toStdString());
@@ -162,7 +168,7 @@ void Backend::downloadFile(std::vector<std::string> url_list, int iter) {
 }
 
 void Backend::modsStart() {
-
+    emit backendInfo("Downloading all required mods");
 }
 
 void Backend::manifestStart() {

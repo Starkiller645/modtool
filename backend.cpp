@@ -71,7 +71,7 @@ void Backend::forgeStart() {
     mc_dir_path = envHome + "/.minecraft/versions/";
 #elif defined(WIN32) || defined(_WIN32)
     std::string appData = std::getenv("APPDATA");
-    mc_dir_path = appData + "\.minecraft\versions";
+    mc_dir_path = appData + "/.minecraft/versions";
 #elif __APPLE__ && TARGET_OS_MAC
     std::string envHome = std::getenv("HOME");
     mc_dir_path = envHome + "/Library/Application Support/minecraft";
@@ -89,7 +89,7 @@ void Backend::forgeStart() {
     }
 
     if(haveForge) {
-        this->modsStart();
+        this->manifestStart();
     } else {
         emit backendInfo("A valid Forge install was not found. We are now downloading the Forge installer. Please follow the instructions to install Forge.");
         QUrl forge_dl_url("https://maven.minecraftforge.net/net/minecraftforge/forge/1.12.2-14.23.5.2855/forge-1.12.2-14.23.5.2855-installer.jar");
@@ -154,6 +154,9 @@ void Backend::downloadFile(std::vector<std::string> url_list, int iter) {
     auto *manager = new QNetworkAccessManager();
     std::cout << "Downloading: " << filename.toStdString() << std::endl << "From: " << url.toString().toStdString() << std::endl << std::endl;
     connect(manager, &QNetworkAccessManager::finished, this, &Backend::downloaded);
+    if(this->downloadingMods) {
+        emit downloadingMod(this->mods_name_list[iter]);
+    }
     QNetworkRequest rq(url);
     QNetworkReply *reply = manager->get(rq);
     connect(reply, &QNetworkReply::downloadProgress, this, &Backend::logProgress);
@@ -168,9 +171,36 @@ void Backend::downloadFile(std::vector<std::string> url_list, int iter) {
 }
 
 void Backend::modsStart() {
-    emit backendInfo("Downloading all required mods");
+    emit switchPage(1);
+    emit setupDownload(this->mods_name_list.size());
+    this->downloadingMods = true;
+    this->downloadFile(this->mods_url_list, 0);
+}
+
+void Backend::parseManifest() {
+    std::cout << "Parsing manifest" << std::endl;
+    QFile manifest_file("manifest.txt");
+    manifest_file.open(QIODevice::ReadOnly);
+    QByteArray manifest_data = manifest_file.readAll();
+    QString manifest = QString(manifest_data);
+    QStringList manifest_list;
+    manifest_list = manifest.split("\n");
+    std::vector<std::string> mods_url_list;
+    std::vector<std::string> name_list;
+    foreach(QString line, manifest_list) {
+        QStringList vars = line.split("|", Qt::SkipEmptyParts);
+        if(vars.length() > 1) {
+            name_list.push_back(vars[0].toStdString());
+            mods_url_list.push_back(vars[1].toStdString());
+        }
+    }
+    this->mods_url_list = mods_url_list;
+    this->mods_name_list = name_list;
+    this->modsStart();
 }
 
 void Backend::manifestStart() {
-
+    std::cout << "Downloading manifest" << std::endl;
+    this->downloadFile("manifest.txt", "https://jacobtye.dev/manifest");
+    connect(this, &Backend::downloadComplete, this, &Backend::parseManifest);
 }

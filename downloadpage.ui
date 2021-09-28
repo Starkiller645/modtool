@@ -30,14 +30,14 @@
       </spacer>
      </item>
      <item alignment="Qt::AlignHCenter">
-      <widget class="QLabel" name="label">
+      <widget class="QLabel" name="downloadLabel">
        <property name="text">
         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:28pt; font-weight:600;&quot;&gt;Downloading&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
       </widget>
      </item>
      <item alignment="Qt::AlignHCenter">
-      <widget class="QLabel" name="label_2">
+      <widget class="QLabel" name="infoLabel">
        <property name="text">
         <string/>
        </property>

@@ -16,6 +16,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->startPage->ui->startButton, &QPushButton::clicked, this->backend, &Backend::javaStart);
     connect(backend, &Backend::backendError, [this](std::string message){QMessageBox::warning(this, "ModTool", message.c_str());});
     connect(backend, &Backend::backendInfo, [this](std::string message){QMessageBox::information(this, "ModTool", message.c_str());});
+    connect(backend, &Backend::switchPage, this->ui->stackedWidget, &QStackedWidget::setCurrentIndex);
+    connect(backend, &Backend::setupDownload, this->ui->downloadPage, &DownloadPage::setup);
+    connect(backend, &Backend::downloadingMod, this->ui->downloadPage, &DownloadPage::setName);
 }
 
 MainWindow::~MainWindow()

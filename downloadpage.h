@@ -15,8 +15,15 @@ public:
     explicit DownloadPage(QWidget *parent = nullptr);
     ~DownloadPage();
 
+public slots:
+    void setName(std::string);
+    void setup(int);
+
 private:
     Ui::DownloadPage *ui;
+    QString current_name;
+    int current_iter;
+    int total_iter;
 };
 
 #endif // DOWNLOADPAGE_H

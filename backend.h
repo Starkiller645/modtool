@@ -35,15 +35,21 @@ signals:
     void nextFile(std::vector<std::string>, int);
     void backendError(std::string);
     void backendInfo(std::string);
+    void setupDownload(int);
+    void downloadingMod(std::string);
 private:
     void downloadFile(std::string, std::string);
     void downloadFile(std::vector<std::string>, int);
     void forgeInstall();
+    void parseManifest();
     std::vector<std::string> url_list;
     std::string java_filename;
     std::string forge_filename;
     int iter;
     bool downloadMultipleFiles = false;
+    bool downloadingMods = false;
+    std::vector<std::string> mods_url_list;
+    std::vector<std::string> mods_name_list;
     std::string download_filename;
 };
 

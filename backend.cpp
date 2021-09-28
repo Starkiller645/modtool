@@ -19,30 +19,27 @@ Backend::Backend(QObject *parent) : QObject(parent)
 
 void Backend::javaStart() {
     qDebug() << "Checking for/downloading Java";
-    const QStringList args = {"--version"};
+    QStringList args;
+#if !defined(WIN32) && !defined(_WIN32)
+    args << "--version";
+#else
+    args << "-version";
+#endif
     QProcess java;
     java.start("java", args);
-    java.waitForReadyRead();
+    java.waitForFinished();
     QString output(java.readAllStandardOutput());
     QString err(java.readAllStandardError());
-    qDebug() << output;
-    qDebug() << err;
     std::cout << output.toStdString() << std::endl;
     std::cout << err.toStdString() << std::endl;
-    //std::vector<std::string> test_vector = {"https://files.vexatos.com/Computronics/Computronics-1.12.2-1.6.6.jar", "https://media.forgecdn.net/files/2828/357/OpenComputers-MC1.12.2-1.7.5.192.jar", "https://media.forgecdn.net/files/2974/106/ImmersiveEngineering-0.12-98.jar"};
-    if(output.trimmed().isEmpty()) {
+    if(output.trimmed().isEmpty() && err.trimmed().isEmpty()) {
         std::string url;
         std::string filename;
+        std::cout << "Could not find Java" << std::endl;
 #ifdef __unix__
-        emit backendError("You are on Linux but do not seem to have java installed. Please install Java through your package manager and rerun the program.");
+        emit backendError("Java was not found on your system. Please install Java through your package manager and rerun the program.");
 #elif defined(WIN32) || defined(_WIN32)
-        emit backendInfo("Java was not found on your system. We will now download the Java installer. Please follow the instructions to install Java");
-        url = "https://sdlc-esd.oracle.com/ESD6/JSCDL/jdk/8u301-b09/d3c52aa6bfa54d3ca74e617f18309292/jre-8u301-windows-i586.exe?GroupName=JSC&FilePath=/ESD6/JSCDL/jdk/8u301-b09/d3c52aa6bfa54d3ca74e617f18309292/jre-8u301-windows-i586.exe&BHost=javadl.sun.com&File=jre-8u301-windows-i586.exe&AuthParam=1632757471_350cd084cf0f41795280719fc7f6339e&ext=.exe";
-        filename = "jre-8u301-windows-i586.exe";
-        this->java_filename = filename;
-        this->downloadFile(url, filename);
-        disconnect(this, &Backend::downloadComplete, nullptr, nullptr);
-        connect(this, &Backend::downloadComplete, [this](){this->javaInstall();});
+        emit backendError("Java was not found on your system. Please install java first from https://www.java.com/en/download/ and rerun the program");
 #elif __APPLE_
     #if TARGET_OS_MAC
         emit backendError("We do not officially support MacOS, because *someone* didn't want me 'fiddling with their Mac'. Please install Java yourself and rerun");
@@ -55,9 +52,13 @@ void Backend::javaStart() {
 }
 
 void Backend::javaInstall() {
+    std::cout << "Installing Java" << std::endl;
     QProcess jinstall;
     QStringList args = {};
-    jinstall.start(this->java_filename.c_str(), args);
+    jinstall.start(".\\jre-8u301-windows-x64.exe", args);
+    jinstall.waitForFinished();
+    QString stdErr(jinstall.readAllStandardError());
+    QString stdOut(jinstall.readAllStandardOutput());
     connect(&jinstall, SIGNAL(finished(int, QProcess::ExitStatus)), this, SLOT(forgeStart(int, QProcess::ExitStatus)));
 }
 
@@ -72,7 +73,7 @@ void Backend::forgeStart() {
     mc_dir_path = envHome + "/.minecraft/versions/";
 #elif defined(WIN32) || defined(_WIN32)
     std::string appData = std::getenv("APPDATA");
-    mc_dir_path = appData + "/.minecraft/versions";
+    mc_dir_path = appData + "\\.minecraft\\versions";
 #elif __APPLE__ && TARGET_OS_MAC
     std::string envHome = std::getenv("HOME");
     mc_dir_path = envHome + "/Library/Application Support/minecraft";
@@ -106,7 +107,7 @@ void Backend::forgeInstall() {
     QStringList args = {"-jar", QString(this->forge_filename.c_str())};
     finstall->start("java", args);
     connect(finstall, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-            [=](int exitCode, QProcess::ExitStatus exitStatus){this->modsStart();});
+            [=](int exitCode, QProcess::ExitStatus exitStatus){this->manifestStart();});
 }
 
 void Backend::downloaded(QNetworkReply *res) {
@@ -141,8 +142,12 @@ void Backend::downloadFile(std::string name, std::string url_str) {
 }
 
 void Backend::logProgress(qint64 received, qint64 total) {
-    int percentage = (received / total) * 100;
-    std::cout << "Downloading: [" << std::to_string(percentage) << "%]\n";
+    if(total != 0) {
+        int percentage = (received / total) * 100;
+        std::cout << "Downloading: [" << std::to_string(percentage) << "%]\n";
+    } else {
+        std::cout << "Downloading: [...]\n";
+    }
 }
 
 void Backend::downloadFile(std::vector<std::string> url_list, int iter) {
@@ -188,7 +193,7 @@ void Backend::installMods() {
     mod_dir_path = envHome + "/.minecraft/mods/";
 #elif defined(WIN32) || defined(_WIN32)
     std::string appData = std::getenv("APPDATA");
-    mod_dir_path = appData + "/.minecraft/mods/";
+    mod_dir_path = appData + "\\.minecraft\\mods\\";
 #elif __APPLE__ && TARGET_OS_MAC
     std::string envHome = std::getenv("HOME");
     mod_dir_path = envHome + "/Library/Application Support/mods/";
@@ -224,7 +229,7 @@ void Backend::parseManifest() {
     std::vector<std::string> mods_url_list;
     std::vector<std::string> name_list;
     foreach(QString line, manifest_list) {
-        QStringList vars = line.split("|", Qt::SkipEmptyParts);
+        QStringList vars = line.split("|");
         if(vars.length() > 1) {
             name_list.push_back(vars[0].toStdString());
             mods_url_list.push_back(vars[1].toStdString());

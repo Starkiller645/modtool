@@ -3,6 +3,7 @@
 #include "./ui_mainwindow.h"
 #include "ui_startpage.h"
 #include "ui_downloadpage.h"
+#include "ui_completewidget.h"
 #include <QObject>
 #include <QPushButton>
 #include <QMessageBox>

@@ -19,6 +19,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(backend, &Backend::switchPage, this->ui->stackedWidget, &QStackedWidget::setCurrentIndex);
     connect(backend, &Backend::setupDownload, this->ui->downloadPage, &DownloadPage::setup);
     connect(backend, &Backend::downloadingMod, this->ui->downloadPage, &DownloadPage::setName);
+    connect(backend, &Backend::modInfo, this->ui->completePage, &CompleteWidget::updateText);
 }
 
 MainWindow::~MainWindow()

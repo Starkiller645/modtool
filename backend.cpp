@@ -41,6 +41,7 @@ void Backend::javaStart() {
         filename = "jre-8u301-windows-i586.exe";
         this->java_filename = filename;
         this->downloadFile(url, filename);
+        disconnect(this, &Backend::downloadComplete, nullptr, nullptr);
         connect(this, &Backend::downloadComplete, [this](){this->javaInstall();});
 #elif __APPLE_
     #if TARGET_OS_MAC
@@ -95,6 +96,7 @@ void Backend::forgeStart() {
         QUrl forge_dl_url("https://maven.minecraftforge.net/net/minecraftforge/forge/1.12.2-14.23.5.2855/forge-1.12.2-14.23.5.2855-installer.jar");
         this->forge_filename = forge_dl_url.fileName().toStdString();
         this->downloadFile(this->forge_filename, forge_dl_url.toString().toStdString());
+        disconnect(this, &Backend::downloadComplete, nullptr, nullptr);
         connect(this, &Backend::downloadComplete, [this](){this->forgeInstall();});
     }
 }
@@ -148,14 +150,22 @@ void Backend::downloadFile(std::vector<std::string> url_list, int iter) {
     this->url_list = url_list;
     this->iter = iter;
     std::cout << "Progress: " << std::to_string(iter) << "/" << std::to_string(url_list.size()) << std::endl;
-    if(this->iter >= this->url_list.size()) emit downloadComplete();
+    if(this->iter >= this->url_list.size()) {
+        emit downloadComplete();
+        std::cout << "Done!" << std::endl;
+        return;
+    }
     QUrl url(this->url_list[this->iter].c_str());
     QString filename = url.fileName();
     auto *manager = new QNetworkAccessManager();
     std::cout << "Downloading: " << filename.toStdString() << std::endl << "From: " << url.toString().toStdString() << std::endl << std::endl;
     connect(manager, &QNetworkAccessManager::finished, this, &Backend::downloaded);
     if(this->downloadingMods) {
-        emit downloadingMod(this->mods_name_list[iter]);
+        try {
+            emit downloadingMod(this->mods_name_list[iter]);
+        } catch(std::logic_error) {
+            ;
+        }
     }
     QNetworkRequest rq(url);
     QNetworkReply *reply = manager->get(rq);
@@ -170,11 +180,37 @@ void Backend::downloadFile(std::vector<std::string> url_list, int iter) {
     }
 }
 
+void Backend::installMods() {
+    std::cout << "Installing mods" << std::endl;
+    std::string mod_dir_path;
+    #ifdef __unix__
+    std::string envHome = std::getenv("HOME");
+    mod_dir_path = envHome + "/.minecraft/mods/";
+#elif defined(WIN32) || defined(_WIN32)
+    std::string appData = std::getenv("APPDATA");
+    mod_dir_path = appData + "/.minecraft/mods/";
+#elif __APPLE__ && TARGET_OS_MAC
+    std::string envHome = std::getenv("HOME");
+    mod_dir_path = envHome + "/Library/Application Support/mods/";
+#endif
+    QDir currentDir("./");
+    QStringList mods = currentDir.entryList(QStringList() << "*.jar", QDir::Files);
+    foreach(QString mod_file, mods) {
+        QString new_location = QString(mod_dir_path.c_str()) + mod_file;
+        currentDir.rename(mod_file, currentDir.toNativeSeparators(new_location));
+    }
+    emit switchPage(2);
+    emit modInfo(mod_dir_path, this->mods_name_list.size());
+}
+
 void Backend::modsStart() {
     emit switchPage(1);
     emit setupDownload(this->mods_name_list.size());
     this->downloadingMods = true;
     this->downloadFile(this->mods_url_list, 0);
+    disconnect(this, &Backend::downloadComplete, nullptr, nullptr);
+    connect(this, &Backend::downloadComplete, this, &Backend::installMods);
+    
 }
 
 void Backend::parseManifest() {
@@ -194,6 +230,9 @@ void Backend::parseManifest() {
             mods_url_list.push_back(vars[1].toStdString());
         }
     }
+    foreach(std::string mod, mods_name_list) {
+        std::cout << mod << std::endl;
+    }
     this->mods_url_list = mods_url_list;
     this->mods_name_list = name_list;
     this->modsStart();
@@ -202,5 +241,6 @@ void Backend::parseManifest() {
 void Backend::manifestStart() {
     std::cout << "Downloading manifest" << std::endl;
     this->downloadFile("manifest.txt", "https://jacobtye.dev/manifest");
+    disconnect(this, &Backend::downloadComplete, nullptr, nullptr);
     connect(this, &Backend::downloadComplete, this, &Backend::parseManifest);
 }

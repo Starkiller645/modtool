@@ -25,6 +25,7 @@ public slots:
     void downloaded(QNetworkReply*);
     void logProgress(qint64, qint64);
     void javaInstall();
+    void installMods();
 signals:
     void switchPage(int);
     void manifestComplete();
@@ -37,6 +38,7 @@ signals:
     void backendInfo(std::string);
     void setupDownload(int);
     void downloadingMod(std::string);
+    void modInfo(std::string, int);
 private:
     void downloadFile(std::string, std::string);
     void downloadFile(std::vector<std::string>, int);

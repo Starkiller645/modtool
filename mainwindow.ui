@@ -21,6 +21,7 @@
        <widget class="QStackedWidget" name="stackedWidget">
         <widget class="StartPage" name="startPage"/>
         <widget class="DownloadPage" name="downloadPage"/>
+        <widget class="CompleteWidget" name="completePage"/>
        </widget>
       </item>
      </layout>
@@ -39,6 +40,12 @@
    <class>DownloadPage</class>
    <extends>QWidget</extends>
    <header>downloadpage.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>CompleteWidget</class>
+   <extends>QWidget</extends>
+   <header>completewidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

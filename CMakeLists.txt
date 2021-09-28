@@ -28,6 +28,9 @@ set(PROJECT_SOURCES
         downloadpage.h
         downloadpage.cpp
         downloadpage.ui
+        completewidget.h
+        completewidget.cpp
+        completewidget.ui
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)

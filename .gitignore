@@ -78,3 +78,5 @@ build
 # VSCode dir
 # ----------
 .vscode
+
+CMakeLists.txt.user*

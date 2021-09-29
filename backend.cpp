@@ -199,7 +199,14 @@ void Backend::installMods() {
     mod_dir_path = envHome + "/Library/Application Support/mods/";
 #endif
     QDir currentDir("./");
+    QDir modsDir(mod_dir_path.c_str());
     QStringList mods = currentDir.entryList(QStringList() << "*.jar", QDir::Files);
+    QStringList oldMods = modsDir.entryList(QStringList() << "*.jar", QDir::Files);
+
+    foreach(QString old_mod, oldMods) {
+        modsDir.remove(old_mod);
+    }
+
     foreach(QString mod_file, mods) {
         QString new_location = QString(mod_dir_path.c_str()) + mod_file;
         currentDir.rename(mod_file, currentDir.toNativeSeparators(new_location));

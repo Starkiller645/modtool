@@ -18,6 +18,7 @@ public:
 public slots:
     void setName(std::string);
     void setup(int);
+    void modDownloadProgress(int, float, float);
 
 private:
     Ui::DownloadPage *ui;

@@ -39,6 +39,7 @@ signals:
     void setupDownload(int);
     void downloadingMod(std::string);
     void modInfo(std::string, int);
+    void modDownloadProgress(int, float, float);
 private:
     void downloadFile(std::string, std::string);
     void downloadFile(std::vector<std::string>, int);

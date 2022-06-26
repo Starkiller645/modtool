@@ -12,6 +12,12 @@
     #include <Windows.h>
 #endif
 
+double round(double d)
+{
+    double value = (int)(d * 100 + .5);
+    return (double)value / 100;
+}
+
 Backend::Backend(QObject *parent) : QObject(parent)
 {
 
@@ -143,10 +149,16 @@ void Backend::downloadFile(std::string name, std::string url_str) {
 
 void Backend::logProgress(qint64 received, qint64 total) {
     if(total != 0) {
-        int percentage = (received / total) * 100;
-        std::cout << "Downloading: [" << std::to_string(percentage) << "%]\n";
+        std::cout << QString::number(received).toStdString() << std::endl;
+        std::cout << QString::number(total).toStdString() << std::endl;
+        int percentage = ((double)received / (double)total) * 100;
+        float mb_total = (float)total / 1000000.0;
+        float mb_current = (float)received / 1000000.0;
+        std::cout << "Downloading: [" << std::to_string(mb_total) << "]\n";
+        emit modDownloadProgress(percentage, round(mb_current), round(mb_total));
     } else {
         std::cout << "Downloading: [...]\n";
+        emit modDownloadProgress(0, 0.0, 0.0);
     }
 }
 

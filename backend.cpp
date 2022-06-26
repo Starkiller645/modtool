@@ -227,7 +227,7 @@ void Backend::modsStart() {
 
 void Backend::parseManifest() {
     std::cout << "Parsing manifest" << std::endl;
-    QFile manifest_file("manifest.txt");
+    QFile manifest_file("manifest.modtool.txt");
     manifest_file.open(QIODevice::ReadOnly);
     QByteArray manifest_data = manifest_file.readAll();
     QString manifest = QString(manifest_data);
@@ -252,7 +252,7 @@ void Backend::parseManifest() {
 
 void Backend::manifestStart() {
     std::cout << "Downloading manifest" << std::endl;
-    this->downloadFile("manifest.txt", "https://jacobtye.dev/manifest");
+    this->downloadFile("manifest.modtool.txt", "https://tallie.dev/modtool/manifest");
     disconnect(this, &Backend::downloadComplete, nullptr, nullptr);
     connect(this, &Backend::downloadComplete, this, &Backend::parseManifest);
 }

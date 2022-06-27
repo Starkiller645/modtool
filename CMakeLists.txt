@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(ModTool VERSION 0.1 LANGUAGES CXX)
+project(ModTool VERSION 0.2 LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -9,12 +9,13 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
 set(CMAKE_CXX_STANDARD 11)
+
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(WIN32)
     set(CMAKE_PREFIX_PATH "C:\\Qt\\5.12.11\\msvc2017_64\\")
 endif()
 
-find_package(QT NAMES Qt6 COMPONENTS Widgets REQUIRED)
+find_package(QT NAMES Qt5 Qt6 COMPONENTS Widgets REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Network REQUIRED)
 
@@ -63,7 +64,7 @@ target_link_libraries(ModTool PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 target_link_libraries(ModTool PRIVATE Qt${QT_VERSION_MAJOR}::Network)
 
 set_target_properties(ModTool PROPERTIES
-    MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com
+    MACOSX_BUNDLE_GUI_IDENTIFIER dev.tallie.modtool
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
 )

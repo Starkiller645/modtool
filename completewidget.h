@@ -17,6 +17,7 @@ public:
 
 public slots:
     void updateText(std::string, int);
+    void updateCacheInfo(int, int);
 
 private:
     Ui::CompleteWidget *ui;

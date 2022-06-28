@@ -58,7 +58,7 @@ void Backend::init() {
 }
 
 void Backend::javaStart() {
-    std::cout << "      [\033[33mJava\033[0m] Checking for Java...\n";
+    std::cout << "       [\033[33mJava\033[0m] Checking for Java...\n";
     QStringList args;
 #if !defined(WIN32) && !defined(_WIN32)
     args << "--version";
@@ -73,7 +73,7 @@ void Backend::javaStart() {
     if(output.trimmed().isEmpty() && err.trimmed().isEmpty()) {
         std::string url;
         std::string filename;
-        std::cout << "      [\033[93mJava\033[0m] Could not find Java" << std::endl;
+        std::cout << "       [\033[33mJava\033[0m] Could not find Java" << std::endl;
 #ifdef __unix__
         emit backendError("Java was not found on your system. Please install Java through your package manager and rerun the program.");
 #elif defined(WIN32) || defined(_WIN32)
@@ -84,7 +84,7 @@ void Backend::javaStart() {
 #endif
 #endif
     } else {
-        std::cout << "      [\033[93mJava\033[0m] Found a valid Java install,  continuing...\n";
+        std::cout << "       [\033[33mJava\033[0m] Found a valid Java install, continuing...\n";
         this->forgeStart();
     }
 }
@@ -105,7 +105,7 @@ void Backend::forgeStart(int, QProcess::ExitStatus) {
 }
 
 void Backend::forgeStart() {
-    std::cout << "     [\033[96mForge\033[0m] Checking for Forge...\n";
+    std::cout << "      [\033[96mForge\033[0m] Checking for Forge...\n";
     QDir cache_dir;
     cache_dir.mkdir(this->cache_dir.c_str());
     QDir mc_versions_dir(this->mc_versions_dir.c_str());
@@ -113,7 +113,7 @@ void Backend::forgeStart() {
     QStringList versions = mc_versions_dir.entryList(QStringList() << "*", QDir::Dirs);
     foreach(QString filename, versions) {
         if(filename.contains("1.12.2-forge")) {
-            std::cout << "     [\033[96mForge\033[0m] Found Forge install: \033[2m" << filename.toStdString() << "\n";
+            std::cout << "      [\033[96mForge\033[0m] Found Forge install: \033[2m" << filename.toStdString() << "\n";
             haveForge = true;
             break;
         }
@@ -180,6 +180,7 @@ void Backend::downloaded(QNetworkReply *res) {
         filehandle.close();
     }
     this->iter += 1;
+    this->downloaded_mods += 1;
 
     std::string fname = QUrl(this->download_filename.c_str()).fileName().toStdString();        ;
     std::string orig_fname = fname;
@@ -191,10 +192,10 @@ void Backend::downloaded(QNetworkReply *res) {
     }
 
     std::cout << "\e[F\e[K\e[F\e[K\e[F\e[K\e[F\e[K";
-    std::cout << "[\033[92mDownloaded\033[0m] \033[2m" << orig_fname << "\033[0m\n";
+    std::cout << " [\033[92mDownloaded\033[0m] " << orig_fname << "\033[0m\n";
     std::cout << "╭────────────────────────────────────────────────────────────╮" << "\n";
     std::cout << "│Download complete: " << fname << "           │\n";
-    std::cout << "│[DOWNLOAD FINISHED] \033[34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m 100%│\n";
+    std::cout << "│[DOWNLOAD FINISHED] \033[94m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m 100%│\n";
     std::cout << "╰────────────────────────────────────────────────────────────╯\n";
     //std::cout << "\n";
     if(!this->downloadMultipleFiles) emit downloadComplete();
@@ -260,7 +261,7 @@ void Backend::logProgress(qint64 received, qint64 total) {
         int cells_inprogress = 35 - cells_complete;
 
         for(int i = 0; i < cells_complete; i++) {
-            std::cout << "\033[34m━\033[0m";
+            std::cout << "\033[94m━\033[0m";
         }
         for(int i = 0; i < cells_inprogress; i++) {
             std::cout << "\033[2m━\033[0m";
@@ -293,25 +294,54 @@ void Backend::downloadFile(std::vector<std::string> url_list, int iter) {
     QUrl url(this->url_list[this->iter].c_str());
     this->download_filename = url.toString().toStdString();
     QString filename = url.fileName();
-    auto *manager = new QNetworkAccessManager();
-    connect(manager, &QNetworkAccessManager::finished, this, &Backend::downloaded);
-    if(this->downloadingMods) {
-        try {
-            emit downloadingMod(this->mods_name_list[iter]);
-        } catch(std::logic_error) {
-            ;
+
+    if(this->cacheCheck(filename.toStdString())) {
+        this->iter += 1;
+        this->cached_mods += 1;
+
+        std::string fname = QUrl(this->download_filename.c_str()).fileName().toStdString();        ;
+        std::string orig_fname = fname;
+        if(fname.length() > 30) {
+            fname = fname.substr(0, 27) + "...";
+        }
+        while(fname.length() < 30) {
+            fname += " ";
+        }
+
+        std::cout << "\e[F\e[K\e[F\e[K\e[F\e[K\e[F\e[K";
+        std::cout << "  [\033[92mCache Hit\033[0m] \033[2m" << orig_fname << "\033[0m\n";
+        std::cout << "╭────────────────────────────────────────────────────────────╮" << "\n";
+        std::cout << "│Cache Hit for: " << fname << "               │\n";
+        std::cout << "│[CACHE HIT ON FILE] \033[92m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m 100%│\n";
+        std::cout << "╰────────────────────────────────────────────────────────────╯\n";
+        this->downloadFile(this->url_list, this->iter);
+    } else {
+        auto *manager = new QNetworkAccessManager();
+        connect(manager, &QNetworkAccessManager::finished, this, &Backend::downloaded);
+        if(this->downloadingMods) {
+            try {
+                emit downloadingMod(this->mods_name_list[iter]);
+            } catch(std::logic_error) {
+                ;
+            }
+        }
+        QNetworkRequest rq(url);
+        QNetworkReply *reply = manager->get(rq);
+        connect(reply, &QNetworkReply::downloadProgress, this, &Backend::logProgress);
+        connect(manager, &QNetworkAccessManager::finished, this, [this](QNetworkReply *res){this->downloadFile(this->url_list, this->iter);});
+        switch (reply->error()) {
+            case QNetworkReply::NoError:
+                break;
+            default:
+                std::cout << "An error occurred during file download";
         }
     }
-    QNetworkRequest rq(url);
-    QNetworkReply *reply = manager->get(rq);
-    connect(reply, &QNetworkReply::downloadProgress, this, &Backend::logProgress);
-    connect(manager, &QNetworkAccessManager::finished, this, [this](QNetworkReply *res){this->downloadFile(this->url_list, this->iter);});
-    switch (reply->error()) {
-        case QNetworkReply::NoError:
-            break;
-        default:
-            std::cout << "An error occurred during file download";
-    }
+}
+
+bool Backend::cacheCheck(std::string filename) {
+    QStringList cached_files = this->cache->entryList(QStringList() << "*.jar", QDir::Files);
+    if(cached_files.contains(filename.c_str(), Qt::CaseInsensitive)) return true;
+    return false;
 }
 
 void Backend::installMods() {
@@ -336,21 +366,23 @@ void Backend::installMods() {
 #endif
         QString new_location = QString(path.c_str()) + mod_file;
         std::string mod_path = cache_path + mod_file.toStdString();
-        std::cout << "[\033[95mInstalling\033[0m] \033[2m" << mod_file.toStdString() << "\033[0m\n";
+        std::cout << " [\033[95mInstalling\033[0m] " << mod_file.toStdString() << "\033[0m\n";
         if (!QFile::copy(mod_path.c_str(), currentDir.toNativeSeparators(new_location))) std::cout << "Copy failed\n";
     }
     emit switchPage(2);
     emit modInfo(this->mc_mods_dir, this->mods_name_list.size());
+    emit cacheInfo(this->downloaded_mods, this->cached_mods);
 }
 
 void Backend::modsStart() {
     emit switchPage(1);
     emit setupDownload(this->mods_name_list.size());
+    this->downloaded_mods = 0;
+    this->cached_mods = 0;
     this->downloadingMods = true;
-    this->downloadFile(this->mods_url_list, 0);
     disconnect(this, &Backend::downloadComplete, nullptr, nullptr);
     connect(this, &Backend::downloadComplete, this, &Backend::installMods);
-    
+    this->downloadFile(this->mods_url_list, 0);
 }
 
 void Backend::parseManifest() {

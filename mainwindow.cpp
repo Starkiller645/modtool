@@ -22,6 +22,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(backend, &Backend::downloadingMod, this->ui->downloadPage, &DownloadPage::setName);
     connect(backend, &Backend::modInfo, this->ui->completePage, &CompleteWidget::updateText);
     connect(backend, &Backend::modDownloadProgress, this->ui->downloadPage, &DownloadPage::modDownloadProgress);
+    connect(backend, &Backend::cacheInfo, this->ui->completePage, &CompleteWidget::updateCacheInfo);
 }
 
 MainWindow::~MainWindow()

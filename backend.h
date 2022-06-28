@@ -47,11 +47,13 @@ signals:
     void downloadingMod(std::string);
     void modInfo(std::string, int);
     void modDownloadProgress(int, float, float);
+    void cacheInfo(int, int);
 private:
     void downloadFile(std::string, std::string);
     void downloadFile(std::vector<std::string>, int);
     void forgeInstall();
     void parseManifest();
+    bool cacheCheck(std::string url);
     std::vector<std::string> url_list;
     std::string java_filename;
     std::string forge_filename;
@@ -70,6 +72,8 @@ private:
     std::string mc_versions_dir;
 
     QDir *cache;
+    int cached_mods;
+    int downloaded_mods;
 };
 
 #endif // BACKEND_H

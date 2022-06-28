@@ -14,6 +14,7 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     backend = new Backend();
+    this->setWindowTitle("Tallie's ModTool - v1.3");
     connect(ui->startPage->ui->startButton, &QPushButton::clicked, this->backend, &Backend::init);
     connect(backend, &Backend::backendError, [this](std::string message){QMessageBox::warning(this, "ModTool", message.c_str());});
     connect(backend, &Backend::backendInfo, [this](std::string message){QMessageBox::information(this, "ModTool", message.c_str());});

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Version=1.3
+Type=Application
+Name=Tallie's Mod Tool
+Comment=Mod Updater for my MC modpack
+Exec=modtool
+Icon=modtool

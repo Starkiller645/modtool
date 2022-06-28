@@ -10,6 +10,12 @@
 
 #endif*/
 
+struct Mod {
+    std::string name;
+    std::string filename;
+    std::string url;
+};
+
 class Backend : public QObject
 {
     Q_OBJECT
@@ -26,6 +32,7 @@ public slots:
     void logProgress(qint64, qint64);
     void javaInstall();
     void installMods();
+    void init();
 signals:
     void switchPage(int);
     void manifestComplete();
@@ -53,7 +60,16 @@ private:
     bool downloadingMods = false;
     std::vector<std::string> mods_url_list;
     std::vector<std::string> mods_name_list;
+    std::vector<Mod> mods_list;
     std::string download_filename;
+
+    std::string mc_dir;
+    std::string cache_dir;
+    std::string xdg_resources_dir;
+    std::string mc_mods_dir;
+    std::string mc_versions_dir;
+
+    QDir *cache;
 };
 
 #endif // BACKEND_H

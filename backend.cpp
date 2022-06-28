@@ -8,6 +8,8 @@
 #include <QUrl>
 #include <iostream>
 #include <QDir>
+#include <iomanip>
+#include <sstream>
 #ifdef WIN_32
     #include <Windows.h>
 #endif
@@ -23,8 +25,40 @@ Backend::Backend(QObject *parent) : QObject(parent)
 
 }
 
+void Backend::init() {
+#ifdef __unix__
+    std::string envHome = std::getenv("HOME");
+    this->xdg_resources_dir = envHome + "/.local/share";
+    this->cache_dir = this->xdg_resources_dir + "/modtool";
+    this->mc_dir = envHome + "/.minecraft";
+    this->mc_mods_dir = this->mc_dir + "/mods";
+    this->mc_versions_dir = this->mc_dir + "/versions";
+#elif defined(WIN32) || defined(_WIN32)
+    std::string appData = std::getenv("APPDATA");
+    this->xdg_resources_dir = std::getenv("APPDATA");
+    this->cache_dir = this->xdg_resources_dir + "\\ModTool";
+    this->mc_dir = this->xdg_resources_dir + "\\.minecraft";
+    this->mc_mods_dir = this->mc_dir + "\\mods";
+    this->mc_versions_dir = this->mc_dir + "\\versions"
+#elif __APPLE__ && TARGET_OS_MAC
+    std::string envHome = std::getenv("HOME");
+    this->xdg_resources_dir = envHome + "/Library/Application Support";
+    this->cache_dir = this->xdg_resources_dir + "/dev.tallie.modtool";
+    this->mc_dir = envHome + "/minecraft";
+    this->mc_mods_dir = this->mc_dir + "/mods";
+    this->mc_versions_dir = this->mc_dir + "/versions";
+#endif
+    QDir cache_dir;
+    cache_dir.mkdir(this->cache_dir.c_str());
+    cache_dir.mkdir(this->mc_mods_dir.c_str());
+
+    this->cache = new QDir(this->cache_dir.c_str());
+
+    this->javaStart();
+}
+
 void Backend::javaStart() {
-    qDebug() << "Checking for/downloading Java";
+    std::cout << "      [\033[33mJava\033[0m] Checking for Java...\n";
     QStringList args;
 #if !defined(WIN32) && !defined(_WIN32)
     args << "--version";
@@ -36,12 +70,10 @@ void Backend::javaStart() {
     java.waitForFinished();
     QString output(java.readAllStandardOutput());
     QString err(java.readAllStandardError());
-    std::cout << output.toStdString() << std::endl;
-    std::cout << err.toStdString() << std::endl;
     if(output.trimmed().isEmpty() && err.trimmed().isEmpty()) {
         std::string url;
         std::string filename;
-        std::cout << "Could not find Java" << std::endl;
+        std::cout << "      [\033[93mJava\033[0m] Could not find Java" << std::endl;
 #ifdef __unix__
         emit backendError("Java was not found on your system. Please install Java through your package manager and rerun the program.");
 #elif defined(WIN32) || defined(_WIN32)
@@ -52,7 +84,7 @@ void Backend::javaStart() {
 #endif
 #endif
     } else {
-        std::cout << "Java was found. Continuing install..." << std::endl;
+        std::cout << "      [\033[93mJava\033[0m] Found a valid Java install,  continuing...\n";
         this->forgeStart();
     }
 }
@@ -73,30 +105,15 @@ void Backend::forgeStart(int, QProcess::ExitStatus) {
 }
 
 void Backend::forgeStart() {
-    std::string mc_dir_path;
-    std::string data_cache_path;
-#ifdef __unix__
-    std::string envHome = std::getenv("HOME");
-    mc_dir_path = envHome + "/.minecraft/versions/";
-    data_cache_path = envHome + "/.local/share/modtool";
-#elif defined(WIN32) || defined(_WIN32)
-    std::string appData = std::getenv("APPDATA");
-    mc_dir_path = appData + "\\.minecraft\\versions";
-    data_cache_path = appData + "\\ModTool";
-#elif __APPLE__ && TARGET_OS_MAC
-    std::string envHome = std::getenv("HOME");
-    mc_dir_path = envHome + "/Library/Application Support/minecraft";
-    data_cache_path = envHome + "/.local/share/modtool";
-#endif
+    std::cout << "     [\033[96mForge\033[0m] Checking for Forge...\n";
     QDir cache_dir;
-    cache_dir.mkdir(data_cache_path.c_str());
-    QDir mc_dir(mc_dir_path.c_str());
+    cache_dir.mkdir(this->cache_dir.c_str());
+    QDir mc_versions_dir(this->mc_versions_dir.c_str());
     bool haveForge = false;
-    QStringList versions = mc_dir.entryList(QStringList() << "*", QDir::Dirs);
+    QStringList versions = mc_versions_dir.entryList(QStringList() << "*", QDir::Dirs);
     foreach(QString filename, versions) {
-        std::cout << filename.toStdString() << std::endl;
         if(filename.contains("1.12.2-forge")) {
-            std::cout << "Found Forge install" << std::endl;
+            std::cout << "     [\033[96mForge\033[0m] Found Forge install: \033[2m" << filename.toStdString() << "\n";
             haveForge = true;
             break;
         }
@@ -115,29 +132,14 @@ void Backend::forgeStart() {
 }
 
 void Backend::forgeInstall() {
-    std::string mc_dir_path;
-     std::string data_cache_path;
- #ifdef __unix__
-     std::string envHome = std::getenv("HOME");
-     mc_dir_path = envHome + "/.minecraft/versions/";
-     data_cache_path = envHome + "/.local/share/modtool";
- #elif defined(WIN32) || defined(_WIN32)
-     std::string appData = std::getenv("APPDATA");
-     mc_dir_path = appData + "\\.minecraft\\versions";
-     data_cache_path = appData + "\\ModTool";
- #elif __APPLE__ && TARGET_OS_MAC
-     std::string envHome = std::getenv("HOME");
-     mc_dir_path = envHome + "/Library/Application Support/minecraft";
-     data_cache_path = envHome + "/.local/share/modtool";
- #endif
      QProcess *finstall = new QProcess;
  #ifdef __unix__
      std::string path;
-     path = data_cache_path + "/" + this->forge_filename;
+     path = this->cache_dir + "/" + this->forge_filename;
      QStringList args = {"-jar", QString(path.c_str())};
  #elif defined(WIN32) || defined(_WIN32)
      std::string path;
-     path = data_cache_path + "\\" + this->forge_filename;
+     path = this->cache_dir + "\\" + this->forge_filename;
      std::cout << path << std::endl;
      QStringList args = {"-jar", QString(path.c_str())};
  #endif
@@ -147,32 +149,16 @@ void Backend::forgeInstall() {
 }
 
 void Backend::downloaded(QNetworkReply *res) {
-    std::string mc_dir_path;
-    std::string data_cache_path;
-#ifdef __unix__
-    std::string envHome = std::getenv("HOME");
-    mc_dir_path = envHome + "/.minecraft/versions/";
-    data_cache_path = envHome + "/.local/share/modtool";
-#elif defined(WIN32) || defined(_WIN32)
-    std::string appData = std::getenv("APPDATA");
-    mc_dir_path = appData + "\\.minecraft\\versions";
-    data_cache_path = appData + "\\ModTool";
-#elif __APPLE__ && TARGET_OS_MAC
-    std::string envHome = std::getenv("HOME");
-    mc_dir_path = envHome + "/Library/Application Support/minecraft";
-    data_cache_path = envHome + "/.local/share/modtool";
-#endif
-    std::cout << "Writing file" << std::endl;
     QByteArray data = res->readAll();
     if(this->downloadMultipleFiles) {
         QUrl file(this->url_list[this->iter].c_str());
 #ifdef __unix__
         std::string path;
-        path = data_cache_path + "/" + file.fileName().toStdString();
+        path = this->cache_dir + "/" + file.fileName().toStdString();
         QFile filehandle(path.c_str());
 #elif defined(WIN32) || defined(_WIN32)
         std::string path;
-        path = data_cache_path + "\\" + file.fileName().toStdString();
+        path = this->cache_dir + "\\" + file.fileName().toStdString();
         QFile filehandle(path.c_str());
 #endif
          filehandle.open(QIODevice::WriteOnly);
@@ -182,11 +168,11 @@ void Backend::downloaded(QNetworkReply *res) {
         QUrl file(this->download_filename.c_str());
 #ifdef __unix__
         std::string path;
-        path = data_cache_path + "/" + file.fileName().toStdString();
+        path = this->cache_dir + "/" + file.fileName().toStdString();
         QFile filehandle(path.c_str());
 #elif defined(WIN32) || defined(_WIN32)
         std::string path;
-        path = data_cache_path + "\\" + file.fileName().toStdString();
+        path = this->cache_dir + "\\" + file.fileName().toStdString();
         QFile filehandle(path.c_str());
 #endif
         filehandle.open(QIODevice::WriteOnly);
@@ -194,7 +180,23 @@ void Backend::downloaded(QNetworkReply *res) {
         filehandle.close();
     }
     this->iter += 1;
-    std::cout << "Download complete" << std::endl;
+
+    std::string fname = QUrl(this->download_filename.c_str()).fileName().toStdString();        ;
+    std::string orig_fname = fname;
+    if(fname.length() > 30) {
+        fname = fname.substr(0, 27) + "...";
+    }
+    while(fname.length() < 30) {
+        fname += " ";
+    }
+
+    std::cout << "\e[F\e[K\e[F\e[K\e[F\e[K\e[F\e[K";
+    std::cout << "[\033[92mDownloaded\033[0m] \033[2m" << orig_fname << "\033[0m\n";
+    std::cout << "╭────────────────────────────────────────────────────────────╮" << "\n";
+    std::cout << "│Download complete: " << fname << "           │\n";
+    std::cout << "│[DOWNLOAD FINISHED] \033[34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m 100%│\n";
+    std::cout << "╰────────────────────────────────────────────────────────────╯\n";
+    //std::cout << "\n";
     if(!this->downloadMultipleFiles) emit downloadComplete();
 }
 
@@ -211,12 +213,68 @@ void Backend::downloadFile(std::string name, std::string url_str) {
 
 void Backend::logProgress(qint64 received, qint64 total) {
     if(total != 0) {
-        std::cout << QString::number(received).toStdString() << std::endl;
-        std::cout << QString::number(total).toStdString() << std::endl;
+        std::cout << "\e[F\e[K\e[F\e[K\e[F\e[K\e[F\e[K";
+        std::cout << "╭────────────────────────────────────────────────────────────╮" << "\n";
+        //This is 60 horizontal line chars plus a corner at each end, so 60 chars of space available
+
         int percentage = ((double)received / (double)total) * 100;
         float mb_total = (float)total / 1000000.0;
         float mb_current = (float)received / 1000000.0;
-        std::cout << "Downloading: [" << std::to_string(mb_total) << "]\n";
+
+        std::string fname = QUrl(this->download_filename.c_str()).fileName().toStdString();        ;
+        if(fname.length() > 30) {
+            fname = fname.substr(0, 27) + "...";
+        }
+        while(fname.length() < 30) {
+            fname += " ";
+        }
+
+        std::stringstream ss_1;
+        ss_1 << std::fixed << std::setprecision(2) << mb_total;
+        std::stringstream ss_2;
+        ss_2 << std::fixed << std::setprecision(2) << mb_current;
+
+        std::string mb_total_string = ss_1.str();
+        std::string mb_current_string = ss_2.str();
+
+        std::cout << "│";
+        std::cout << "Downloading: ";
+        std::cout << fname;
+        // Should always be 30 chars + 13 for "Downloading" so 43 total
+        std::cout << "                 ";
+        std::cout << "│\n";
+
+        std::cout << "│";
+        std::cout << "[" << mb_current_string << "MB/" << mb_total_string << "MB]";
+
+        int download_pad = 19 - (mb_current_string.length() + mb_total_string.length() + 7);
+
+        for(int i = 0; i < download_pad; i++) {
+            std::cout << " ";
+        }
+
+        std::cout << " ";
+        // 19 chars + 2 for "  " so 21 total, + " xx%" is 25 leaving 35 for the progress bar
+
+        int cells_complete = ((double)percentage / 100.0) * 35.0;
+        int cells_inprogress = 35 - cells_complete;
+
+        for(int i = 0; i < cells_complete; i++) {
+            std::cout << "\033[34m━\033[0m";
+        }
+        for(int i = 0; i < cells_inprogress; i++) {
+            std::cout << "\033[2m━\033[0m";
+        }
+
+        std::string percentage_string = std::to_string(percentage);
+        if(percentage < 10) percentage_string = " " + percentage_string;
+        if(percentage < 100) percentage_string = " " + percentage_string;
+
+        std::cout << " " << percentage_string << "%";
+
+        std::cout << "│\n";
+        std::cout << "╰────────────────────────────────────────────────────────────╯\n";
+
         emit modDownloadProgress(percentage, round(mb_current), round(mb_total));
     } else {
         std::cout << "Downloading: [...]\n";
@@ -228,16 +286,14 @@ void Backend::downloadFile(std::vector<std::string> url_list, int iter) {
     this->downloadMultipleFiles = true;
     this->url_list = url_list;
     this->iter = iter;
-    std::cout << "Progress: " << std::to_string(iter) << "/" << std::to_string(url_list.size()) << std::endl;
     if(this->iter >= this->url_list.size()) {
         emit downloadComplete();
-        std::cout << "Done!" << std::endl;
         return;
     }
     QUrl url(this->url_list[this->iter].c_str());
+    this->download_filename = url.toString().toStdString();
     QString filename = url.fileName();
     auto *manager = new QNetworkAccessManager();
-    std::cout << "Downloading: " << filename.toStdString() << std::endl << "From: " << url.toString().toStdString() << std::endl << std::endl;
     connect(manager, &QNetworkAccessManager::finished, this, &Backend::downloaded);
     if(this->downloadingMods) {
         try {
@@ -252,7 +308,6 @@ void Backend::downloadFile(std::vector<std::string> url_list, int iter) {
     connect(manager, &QNetworkAccessManager::finished, this, [this](QNetworkReply *res){this->downloadFile(this->url_list, this->iter);});
     switch (reply->error()) {
         case QNetworkReply::NoError:
-            std::cout << "No errors found";
             break;
         default:
             std::cout << "An error occurred during file download";
@@ -260,26 +315,10 @@ void Backend::downloadFile(std::vector<std::string> url_list, int iter) {
 }
 
 void Backend::installMods() {
-    std::cout << "Installing mods" << std::endl;
-    std::string mod_dir_path;
-    std::string mc_dir_path;
-    std::string data_cache_path;
-#ifdef __unix__
-    std::string envHome = std::getenv("HOME");
-    mod_dir_path = envHome + "/.minecraft/mods";
-    data_cache_path = envHome + "/.local/share/modtool";
-#elif defined(WIN32) || defined(_WIN32)
-    std::string appData = std::getenv("APPDATA");
-    mod_dir_path = appData + "\\.minecraft\\mods";
-    data_cache_path = appData + "\\ModTool";
-#elif __APPLE__ && TARGET_OS_MAC
-    std::string envHome = std::getenv("HOME");
-    mod_dir_path = envHome + "/Library/Application Support/minecraft/mods";
-    data_cache_path = envHome + "/.local/share/modtool";
-#endif
-    QDir currentDir(data_cache_path.c_str());
-    QDir modsDir(mod_dir_path.c_str());
-    modsDir.mkdir(mod_dir_path.c_str());
+    std::cout << "\e[F\e[K\e[F\e[K\e[F\e[K\e[F\e[K";
+    QDir currentDir(this->cache_dir.c_str());
+    QDir modsDir(this->mc_mods_dir.c_str());
+    modsDir.mkdir(this->mc_mods_dir.c_str());
     QStringList mods = currentDir.entryList(QStringList() << "*.jar", QDir::Files);
     QStringList oldMods = modsDir.entryList(QStringList() << "*.jar", QDir::Files);
 
@@ -289,16 +328,19 @@ void Backend::installMods() {
 
     foreach(QString mod_file, mods) {
 #if defined(__unix__) || defined(__APPLE__)
-        std::string path = mod_dir_path + "/";
+        std::string path = this->mc_mods_dir + "/";
+        std::string cache_path = this->cache_dir + "/";
 #elif defined(WIN32) || defined(_WIN32)
-        std::string path = mod_dir_path + "\\";
+        std::string path = this->mc_mods_dir + "\\";
+        std::string cache_path = this->cache_dir + "\\";
 #endif
         QString new_location = QString(path.c_str()) + mod_file;
-        std::cout << new_location.toStdString() << std::endl;
-        currentDir.rename(mod_file, currentDir.toNativeSeparators(new_location));
+        std::string mod_path = cache_path + mod_file.toStdString();
+        std::cout << "[\033[95mInstalling\033[0m] \033[2m" << mod_file.toStdString() << "\033[0m\n";
+        if (!QFile::copy(mod_path.c_str(), currentDir.toNativeSeparators(new_location))) std::cout << "Copy failed\n";
     }
     emit switchPage(2);
-    emit modInfo(mod_dir_path, this->mods_name_list.size());
+    emit modInfo(this->mc_mods_dir, this->mods_name_list.size());
 }
 
 void Backend::modsStart() {
@@ -312,30 +354,13 @@ void Backend::modsStart() {
 }
 
 void Backend::parseManifest() {
-    std::string mc_dir_path;
-    std::string data_cache_path;
-#ifdef __unix__
-    std::string envHome = std::getenv("HOME");
-    mc_dir_path = envHome + "/.minecraft/versions/";
-    data_cache_path = envHome + "/.local/share/modtool";
-#elif defined(WIN32) || defined(_WIN32)
-    std::string appData = std::getenv("APPDATA");
-    mc_dir_path = appData + "\\.minecraft\\versions";
-    data_cache_path = appData + "\\ModTool";
-#elif __APPLE__ && TARGET_OS_MAC
-    std::string envHome = std::getenv("HOME");
-    mc_dir_path = envHome + "/Library/Application Support/minecraft";
-    data_cache_path = envHome + "/.local/share/modtool";
-#endif
-    std::cout << "Parsing manifest" << std::endl;
 #ifdef __unix__
     std::string path;
-    path = data_cache_path + "/manifest.modtool.txt";
-    std::cout << path << std::endl;
+    path = this->cache_dir + "/manifest.modtool.txt";
     QFile manifest_file(path.c_str());
 #elif defined(WIN32) || defined(_WIN32)
     std::string path;
-    path = data_cache_path + "\\manifest.modtool.txt";
+    path = this->cache_dir + "\\manifest.modtool.txt";
     QFile manifest_file(path.c_str());
 #endif
     manifest_file.open(QIODevice::ReadOnly);
@@ -352,35 +377,13 @@ void Backend::parseManifest() {
             mods_url_list.push_back(vars[1].toStdString());
         }
     }
-    foreach(std::string mod, mods_name_list) {
-        std::cout << mod << std::endl;
-    }
     this->mods_url_list = mods_url_list;
     this->mods_name_list = name_list;
     this->modsStart();
 }
 
 void Backend::manifestStart() {
-    std::string mc_dir_path;
-    std::string data_cache_path;
-    std::string manifest_path;
-#ifdef __unix__
-    std::string envHome = std::getenv("HOME");
-    mc_dir_path = envHome + "/.minecraft/versions/";
-    data_cache_path = envHome + "/.local/share/modtool";
-    manifest_path = data_cache_path + "/manifest.modtool.txt";
-#elif defined(WIN32) || defined(_WIN32)
-    std::string appData = std::getenv("APPDATA");
-    mc_dir_path = appData + "\\.minecraft\\versions";
-    data_cache_path = appData + "\\ModTool";
-    manifest_path = data_cache_path + "\\manifest.modtool.txt";
-#elif __APPLE__ && TARGET_OS_MAC
-    std::string envHome = std::getenv("HOME");
-    mc_dir_path = envHome + "/Library/Application Support/minecraft";
-    data_cache_path = envHome + "/.local/share/modtool";
-    manifest_path = data_cache_path + "/manifest.modtool.txt";
-#endif
-    std::cout << "Downloading manifest" << std::endl;
+    std::cout << "\n\n\n\n";
     this->downloadFile("manifest.modtool.txt", "https://tallie.dev/modtool/manifest");
     disconnect(this, &Backend::downloadComplete, nullptr, nullptr);
     connect(this, &Backend::downloadComplete, this, &Backend::parseManifest);

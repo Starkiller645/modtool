@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AppInstaller
+    xmlns="http://schemas.microsoft.com/appx/appinstaller/2021"
+    Version="0.1.3.3"
+    Uri="https://tallie.dev/modtool/ModTool.appinstaller" >
+	<MainPackage
+		Name="ModTool"
+		Publisher="CN=Tallie Tye, O=Tallie Tye, L=Hitchin, S=Hertfordshire, C=United Kingdom"
+		Version="0.1.3.3"
+		ProcessorArchitecture="x86"
+		Uri="https://tallie.dev/modtool/ModTool.msix"
+	/>
+	<UpdateSettings>
+		<OnLaunch
+			HoursBetweenUpdateChecks="1"
+			UpdateBlocksActivation="true"
+			ShowPrompt="true" />
+		<AutomaticBackgroundTask />
+		<ForceUpdateFromAnyVersion>true</ForceUpdateFromAnyVersion>
+	</UpdateSettings>
+</AppInstaller>

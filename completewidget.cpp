@@ -18,7 +18,7 @@ void CompleteWidget::updateText(std::string path, int num) {
     this->ui->installLabel->setText(text.c_str());
 }
 
-void CompleteWidget::updateCacheInfo(int downloaded, int cached) {
+void CompleteWidget::updateCacheInfo(int downloaded, int cached, int old_removed) {
     std::string text = "Downloaded ";
     if(downloaded == 0) {
         text += "no mods ";
@@ -36,4 +36,13 @@ void CompleteWidget::updateCacheInfo(int downloaded, int cached) {
         text += std::to_string(cached) + " cached files ";
     }
     this->ui->infoLabel->setText(text.c_str());
+
+    std::string deleted_text = "";
+    if(old_removed == 1) {
+        deleted_text = "Removed 1 old mod";
+    } else if(old_removed > 1) {
+        deleted_text = "Removed " + std::to_string(old_removed) + " old mods";
+    }
+
+    this->ui->deletedLabel->setText(deleted_text.c_str());
 }

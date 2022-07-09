@@ -123,7 +123,7 @@ void Backend::forgeStart() {
         this->manifestStart();
     } else {
         emit backendInfo("A valid Forge install was not found. We are now downloading the Forge installer. Please follow the instructions to install Forge.");
-        QUrl forge_dl_url("https://maven.minecraftforge.net/net/minecraftforge/forge/1.12.2-14.23.5.2855/forge-1.12.2-14.23.5.2855-installer.jar");
+        QUrl forge_dl_url("https://maven.minecraftforge.net/net/minecraftforge/forge/1.12.2-14.23.5.2859/forge-1.12.2-14.23.5.2859-installer.jar");
         this->forge_filename = forge_dl_url.fileName().toStdString();
         this->downloadFile(this->forge_filename, forge_dl_url.toString().toStdString());
         disconnect(this, &Backend::downloadComplete, nullptr, nullptr);
@@ -344,8 +344,42 @@ bool Backend::cacheCheck(std::string filename) {
     return false;
 }
 
+int Backend::flushOldMods() {
+    int removal_count = 0;
+    QDir modsDir(this->cache_dir.c_str());
+    QStringList mods = modsDir.entryList(QStringList() << "*.jar", QDir::Files);
+    for(int i = 0; i < this->mods_url_list.size(); i++) {
+        QString filename = QUrl(this->mods_url_list[i].c_str()).fileName();
+    }
+
+    foreach(QString mod_name, mods) {
+        bool found_mod = false;
+        for(int i = 0; i < this->mods_url_list.size(); i++) {
+            QString filename = QUrl(this->mods_url_list[i].c_str()).fileName();
+            if(filename == mod_name) found_mod = true;
+        }
+        if(!found_mod) {
+            std::string file_path = this->cache_dir.c_str();
+#if defined(WIN32) || defined(_WIN32)
+            file_path += "\\";
+#else
+            file_path += "/";
+#endif
+            file_path += mod_name.toStdString();
+            QFile mod_to_remove(file_path.c_str());
+            mod_to_remove.remove();
+            removal_count += 1;
+            std::cout << "    [\033[91mRemoved\033[0m] " + file_path << std::endl;
+        }
+    }
+    return removal_count;
+}
+
 void Backend::installMods() {
     std::cout << "\e[F\e[K\e[F\e[K\e[F\e[K\e[F\e[K";
+
+    int mods_deleted = this->flushOldMods();
+
     QDir currentDir(this->cache_dir.c_str());
     QDir modsDir(this->mc_mods_dir.c_str());
     modsDir.mkdir(this->mc_mods_dir.c_str());
@@ -371,7 +405,7 @@ void Backend::installMods() {
     }
     emit switchPage(2);
     emit modInfo(this->mc_mods_dir, this->mods_name_list.size());
-    emit cacheInfo(this->downloaded_mods, this->cached_mods);
+    emit cacheInfo(this->downloaded_mods, this->cached_mods, mods_deleted);
 }
 
 void Backend::modsStart() {

@@ -7,4 +7,8 @@
     <qresource>
         <file>assets/logo.png</file>
     </qresource>
+    <qresource prefix="/style">
+        <file>assets/win11_dark.qss</file>
+        <file>assets/win11_light.qss</file>
+    </qresource>
 </RCC>
